@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrajectR — Know Your Ball Flight</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#050508;
+  --surface:#0c0c14;
+  --card:#111120;
+  --card2:#161628;
+  --border:rgba(255,255,255,0.06);
+  --border2:rgba(255,255,255,0.11);
+  --accent:#7C5CFC;
+  --accent-glow:rgba(124,92,252,0.25);
+  --accent2:#00D4AA;
+  --accent2-glow:rgba(0,212,170,0.18);
+  --danger:#FF4D6D;
+  --warning:#FFB830;
+  --success:#00D4AA;
+  --ev:#7C5CFC;
+  --la:#00D4AA;
+  --dist:#FF8C42;
+  --bat:#FFB830;
+  --spin:#FF4D6D;
+  --text:#EDEAF8;
+  --text2:#7A7899;
+  --text3:#3A3858;
+  --font-d:'Syne',sans-serif;
+  --font-b:'Inter',sans-serif;
+  --r:10px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-b);font-size:15px;overflow:hidden}
+
+/* ── Layout ── */
+#app{display:flex;height:100vh;overflow:hidden}
+#sidebar{width:216px;min-width:216px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 10px}
+#main{flex:1;overflow-y:auto;position:relative}
+.screen{display:none;padding:32px 36px;min-height:100%}
+.screen.active{display:block}
+
+/* ── Sidebar ── */
+.logo-wrap{padding:6px 10px 22px;border-bottom:1px solid var(--border);margin-bottom:14px}
+.logo-mark{display:flex;align-items:center;gap:10px;margin-bottom:5px}
+.logo-arc{width:32px;height:32px;flex-shrink:0}
+.logo-text{font-family:var(--font-d);font-size:22px;letter-spacing:-.3px;color:var(--text)}
+.logo-text em{color:var(--accent);font-style:normal}
+.logo-sub{font-size:10px;color:var(--text3);letter-spacing:1.8px;text-transform:uppercase}
+
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;color:var(--text2);font-size:13px;font-weight:500;transition:all .15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;letter-spacing:.1px}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.nav-item.active{color:var(--accent);background:rgba(124,92,252,.12)}
+.nav-item.active .nav-icon-wrap{background:rgba(124,92,252,.2)}
+.nav-icon-wrap{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;background:rgba(255,255,255,.04);flex-shrink:0;transition:background .15s}
+.nav-spacer{flex:1}
+
+.ble-widget{margin:0 2px 10px;padding:10px 12px;border-radius:9px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;border:1px solid var(--border);background:var(--card);transition:all .2s}
+.ble-widget:hover{border-color:var(--border2)}
+.ble-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:all .3s}
+.ble-widget.connected{border-color:rgba(0,212,170,.25);background:rgba(0,212,170,.05)}
+.ble-widget.connected .ble-dot{background:var(--success);box-shadow:0 0 8px var(--success)}
+.ble-widget.scanning .ble-dot{background:var(--warning);animation:blink 1s infinite}
+.ble-widget.idle .ble-dot{background:var(--text3)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.user-chip{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--border)}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:rgba(124,92,252,.25);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0}
+
+/* ── Typography ── */
+h1{font-family:var(--font-d);font-size:44px;letter-spacing:-.5px;line-height:1;color:var(--text)}
+h2{font-family:var(--font-d);font-size:28px;letter-spacing:-.3px;color:var(--text)}
+.label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.8px;color:var(--text3)}
+.caption{font-size:12px;color:var(--text2);line-height:1.5}
+
+/* ── Cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r)}
+.card-grid{display:grid;gap:10px}
+.card-grid-2{grid-template-columns:1fr 1fr}
+.card-grid-3{grid-template-columns:1fr 1fr 1fr}
+.card-grid-4{grid-template-columns:repeat(4,1fr)}
+
+/* ── Metric cards ── */
+.metric-card{padding:18px 20px;position:relative;overflow:hidden;border-radius:var(--r)}
+.metric-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,currentColor,transparent);opacity:.3}
+.metric-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.6px;color:var(--text2);margin-bottom:8px}
+.metric-val{font-family:var(--font-d);font-size:44px;line-height:1;letter-spacing:-.5px}
+.metric-unit{font-size:13px;font-weight:500;color:var(--text2);margin-left:3px}
+.metric-card.sm .metric-val{font-size:30px}
+.metric-card.glow-purple{box-shadow:inset 0 0 40px rgba(124,92,252,.04)}
+.metric-card.glow-teal{box-shadow:inset 0 0 40px rgba(0,212,170,.04)}
+.metric-card.glow-orange{box-shadow:inset 0 0 40px rgba(255,140,66,.04)}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border-radius:8px;font-family:var(--font-b);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none;letter-spacing:.1px}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 0 20px rgba(124,92,252,.3)}
+.btn-primary:hover{background:#6b4eeb;box-shadow:0 0 28px rgba(124,92,252,.45)}
+.btn-primary:active{transform:scale(.97)}
+.btn-teal{background:var(--accent2);color:#040d0a;box-shadow:0 0 20px rgba(0,212,170,.25)}
+.btn-teal:hover{background:#00bfa0}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);background:rgba(255,255,255,.03);border-color:var(--border2)}
+.btn-lg{padding:13px 28px;font-size:14px;border-radius:10px}
+.btn-sm{padding:6px 13px;font-size:12px;border-radius:6px}
+.btn-danger{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.25)}
+
+/* ── Session ── */
+.swing-flash{animation:swingFlash .45s ease}
+@keyframes swingFlash{0%{background:rgba(124,92,252,.08)}100%{background:transparent}}
+.swing-history{display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto}
+.swing-row{display:flex;align-items:center;gap:12px;padding:9px 14px;border-radius:8px;background:var(--card);border:1px solid var(--border);font-size:13px;transition:border-color .15s}
+.swing-row:hover{border-color:var(--border2)}
+.swing-idx{width:26px;color:var(--text3);font-weight:600;font-size:12px;flex-shrink:0}
+.swing-ev{font-family:var(--font-d);font-size:20px;color:var(--ev);width:76px;letter-spacing:-.3px}
+.swing-details{flex:1;color:var(--text2);font-size:12px}
+.quality-badge{padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;flex-shrink:0;letter-spacing:.3px}
+.q-barrel{background:rgba(255,140,66,.15);color:var(--dist)}
+.q-solid{background:rgba(0,212,170,.1);color:var(--success)}
+.q-good{background:rgba(124,92,252,.12);color:var(--ev)}
+.q-soft{background:rgba(255,255,255,.04);color:var(--text3)}
+.sim-btn{width:100%;padding:11px;border-radius:8px;background:var(--card2);border:1px dashed var(--border2);color:var(--text2);font-family:var(--font-b);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;text-align:center}
+.sim-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(124,92,252,.06)}
+.sim-btn.barrel:hover{border-color:var(--dist);color:var(--dist);background:rgba(255,140,66,.06)}
+
+/* ── Spray ── */
+#spray-canvas{display:block;border-radius:8px}
+
+/* ── Progress bars ── */
+.prog-row{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+.prog-label{width:82px;font-size:11px;color:var(--text2);flex-shrink:0}
+.prog-bar{flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;border-radius:2px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.prog-val{width:60px;text-align:right;font-size:13px;font-weight:600;flex-shrink:0}
+
+/* ── History ── */
+.bc-bar{flex:1;border-radius:3px 3px 0 0;position:relative;cursor:pointer;transition:all .2s}
+.bc-bar:hover{filter:brightness(1.3)}
+.bc-bar::after{content:attr(data-v);position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);font-size:10px;color:var(--text2);white-space:nowrap;opacity:0;transition:opacity .15s;background:var(--card2);padding:3px 7px;border-radius:4px}
+.bc-bar:hover::after{opacity:1}
+
+/* ── Derby ── */
+.derby-scoreboard{display:flex;align-items:stretch}
+.derby-stat{text-align:center;padding:28px 32px;flex:1}
+.derby-stat+.derby-stat{border-left:1px solid var(--border)}
+.derby-num{font-family:var(--font-d);font-size:72px;line-height:1;letter-spacing:-2px}
+.derby-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.8px;color:var(--text2);margin-top:8px}
+.lb-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:8px;background:var(--card);border:1px solid var(--border);margin-bottom:6px;transition:border-color .15s}
+.lb-row:hover{border-color:var(--border2)}
+.lb-rank{width:32px;font-family:var(--font-d);font-size:18px;color:var(--text2)}
+.lb-name{flex:1;font-weight:500;font-size:14px}
+.lb-score{font-family:var(--font-d);font-size:22px;color:var(--ev)}
+.lb-unit{font-size:11px;color:var(--text2);margin-left:2px}
+.lb-row.me{background:rgba(124,92,252,.07);border-color:rgba(124,92,252,.3)}
+
+/* ── Coach ── */
+.player-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.player-card{padding:18px 20px;cursor:pointer;transition:all .18s;border-radius:var(--r);border:1px solid var(--border)}
+.player-card:hover{border-color:rgba(124,92,252,.3);transform:translateY(-2px);background:var(--card2)}
+.player-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.trend-up{color:var(--success)}
+.trend-down{color:var(--danger)}
+.trend-flat{color:var(--text2)}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:448px;background:var(--surface);border-left:1px solid var(--border);z-index:100;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)}
+.drawer.open{transform:translateX(0)}
+.drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(2px);z-index:99;display:none}
+.drawer-backdrop.open{display:block}
+.drawer-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px}
+.drawer-tabs{display:flex;gap:4px;padding:10px 16px;border-bottom:1px solid var(--border)}
+.drawer-tab{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);background:none;border:none;transition:all .15s;letter-spacing:.2px}
+.drawer-tab.active{background:var(--accent);color:#fff}
+.drawer-body{flex:1;overflow-y:auto;padding:20px 24px}
+
+/* ── Mode btns ── */
+.mode-grid{display:flex;gap:8px;margin-bottom:24px}
+.mode-btn{flex:1;padding:13px;border-radius:9px;background:var(--card);border:1px solid var(--border);color:var(--text2);font-family:var(--font-b);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;text-align:center}
+.mode-btn:hover{border-color:var(--border2);color:var(--text)}
+.mode-btn.active{background:rgba(124,92,252,.1);border-color:rgba(124,92,252,.4);color:var(--accent)}
+
+/* ── Summary modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:18px 18px 0 0;width:100%;max-width:720px;padding:36px;transform:translateY(48px);transition:transform .28s cubic-bezier(.4,0,.2,1)}
+.modal-overlay.open .modal{transform:translateY(0)}
+
+/* ── Input ── */
+.input{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-family:var(--font-b);font-size:14px;width:100%;outline:none;transition:border-color .15s}
+.input:focus{border-color:rgba(124,92,252,.5)}
+.input::placeholder{color:var(--text3)}
+textarea.input{resize:none}
+
+/* ── Section divider ── */
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+
+/* ── Util ── */
+.flex{display:flex}.items-center{align-items:center}.justify-between{justify-content:space-between}
+.gap-8{gap:8px}.gap-12{gap:12px}.gap-16{gap:16px}.gap-20{gap:20px}
+.mb-4{margin-bottom:4px}.mb-8{margin-bottom:8px}.mb-12{margin-bottom:12px}.mb-16{margin-bottom:16px}.mb-20{margin-bottom:20px}.mb-24{margin-bottom:24px}.mb-28{margin-bottom:28px}
+.mt-8{margin-top:8px}.mt-12{margin-top:12px}.mt-16{margin-top:16px}.mt-20{margin-top:20px}
+.w-full{width:100%}.flex-1{flex:1}
+.text-right{text-align:right}
+.op4{opacity:.4}
+.divider{height:1px;background:var(--border);margin:16px 0}
+
+/* ── Arc decoration ── */
+.arc-bg{position:absolute;top:-60px;right:-40px;width:280px;height:280px;border-radius:50%;border:1px solid rgba(124,92,252,.06);pointer-events:none}
+.arc-bg2{position:absolute;top:-90px;right:-70px;width:360px;height:360px;border-radius:50%;border:1px solid rgba(124,92,252,.03);pointer-events:none}
+
+/* scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Sidebar ── -->
+  <aside id="sidebar">
+    <div class="logo-wrap">
+      <div class="logo-mark">
+        <!-- Arc logo mark -->
+        <svg class="logo-arc" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="15" stroke="rgba(124,92,252,.2)" stroke-width="1"/>
+          <path d="M6 24 Q10 8 26 8" stroke="#7C5CFC" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <circle cx="26" cy="8" r="3" fill="#7C5CFC"/>
+          <circle cx="6" cy="24" r="2" fill="rgba(124,92,252,.5)"/>
+        </svg>
+        <div class="logo-text">Traject<em>R</em></div>
+      </div>
+      <div class="logo-sub">Know your ball flight</div>
+    </div>
+
+    <button class="nav-item active" onclick="nav('session')" id="nav-session">
+      <span class="nav-icon-wrap">⚾</span> Session
+    </button>
+    <button class="nav-item" onclick="nav('history')" id="nav-history">
+      <span class="nav-icon-wrap">📈</span> History
+    </button>
+    <button class="nav-item" onclick="nav('game')" id="nav-game">
+      <span class="nav-icon-wrap">🏆</span> Game
+    </button>
+    <button class="nav-item" onclick="nav('coach')" id="nav-coach">
+      <span class="nav-icon-wrap">📋</span> Coach
+    </button>
+
+    <div class="nav-spacer"></div>
+
+    <div class="ble-widget idle" id="ble-badge" onclick="toggleBle()">
+      <div class="ble-dot"></div>
+      <span id="ble-label" style="flex:1;font-size:12px">Connect R10</span>
+    </div>
+    <div class="user-chip">
+      <div class="user-avatar">JR</div>
+      <div>
+        <div style="font-size:12px;font-weight:600">Jake Rodriguez</div>
+        <div class="caption" style="font-size:10px">Player</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <main id="main">
+
+    <!-- ════ SESSION ════ -->
+    <div class="screen active" id="screen-session" style="position:relative;overflow:hidden">
+      <div class="arc-bg"></div><div class="arc-bg2"></div>
+
+      <div class="flex items-center justify-between mb-24" style="position:relative">
+        <div>
+          <div class="label mb-8" id="session-mode-label">Batting Practice</div>
+          <h1 id="session-title">Ready to Hit</h1>
+          <div class="caption mt-8" id="session-sub">Select a mode and connect your Garmin R10</div>
+        </div>
+        <div class="flex gap-8 items-center">
+          <button class="btn btn-ghost" onclick="showSummary()" id="end-btn" style="display:none">End Session</button>
+          <button class="btn btn-primary btn-lg" onclick="startSession()" id="start-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="rgba(255,255,255,.4)" stroke-width="1"/><path d="M5 4Q7 2 11 4" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/><circle cx="11" cy="4" r="2" fill="white"/></svg>
+            Start Session
+          </button>
+        </div>
+      </div>
+
+      <!-- Mode selector -->
+      <div id="mode-selector">
+        <div class="label mb-12">Select Mode</div>
+        <div class="mode-grid">
+          <button class="mode-btn active" onclick="setMode('bp',this)">⚾&nbsp; Batting Practice</button>
+          <button class="mode-btn" onclick="setMode('derby',this)">🏆&nbsp; Home Run Derby</button>
+          <button class="mode-btn" onclick="setMode('challenge',this)">🎯&nbsp; Daily Challenge</button>
+        </div>
+      </div>
+
+      <!-- Live metrics -->
+      <div id="live-metrics" style="display:none">
+        <div class="label mb-12">Last Swing</div>
+        <div class="card-grid card-grid-3 mb-16" id="metrics-grid"></div>
+
+        <div class="card mb-12" style="padding:20px 24px">
+          <div class="flex items-center justify-between mb-16">
+            <div class="label">Session Averages</div>
+            <div class="caption" id="swing-count-label">0 swings</div>
+          </div>
+          <div id="avg-bars"></div>
+        </div>
+
+        <div class="card-grid card-grid-2">
+          <div class="card" style="padding:18px">
+            <div class="label mb-12">Spray Chart</div>
+            <canvas id="spray-canvas" width="276" height="180"></canvas>
+          </div>
+          <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:8px">
+            <div class="label mb-4">Simulate R10 Data</div>
+            <div class="caption mb-8">Click to fire a mock swing from the Garmin R10</div>
+            <button class="sim-btn" onclick="simSwing()">⚾&nbsp;&nbsp;Simulate Swing</button>
+            <button class="sim-btn barrel" onclick="simSwing(true)">🔥&nbsp;&nbsp;Simulate Barrel</button>
+            <div class="caption mt-8" id="derby-counter" style="display:none;text-align:center;padding:8px;border-radius:6px;background:var(--card2)"></div>
+          </div>
+        </div>
+
+        <div class="section-head mt-20">
+          <div class="label">This Session</div>
+          <div class="caption" id="swing-count-label2"></div>
+        </div>
+        <div class="swing-history" id="swing-history"></div>
+      </div>
+    </div>
+
+    <!-- ════ HISTORY ════ -->
+    <div class="screen" id="screen-history">
+      <div class="mb-24">
+        <div class="label mb-8">Progress</div>
+        <h1>Your Stats</h1>
+      </div>
+
+      <!-- PRs -->
+      <div class="label mb-12">Personal Records</div>
+      <div class="card-grid card-grid-4 mb-24">
+        <div class="metric-card card glow-purple" style="color:var(--ev)">
+          <div class="metric-label">Peak Exit Velo</div>
+          <div class="metric-val">102<span class="metric-unit">mph</span></div>
+        </div>
+        <div class="metric-card card glow-orange" style="color:var(--dist)">
+          <div class="metric-label">Longest Carry</div>
+          <div class="metric-val">412<span class="metric-unit">ft</span></div>
+        </div>
+        <div class="metric-card card" style="color:var(--bat)">
+          <div class="metric-label">Peak Bat Speed</div>
+          <div class="metric-val">76<span class="metric-unit">mph</span></div>
+        </div>
+        <div class="metric-card card glow-teal" style="color:var(--la)">
+          <div class="metric-label">Best Launch Ang.</div>
+          <div class="metric-val">31<span class="metric-unit">°</span></div>
+        </div>
+      </div>
+
+      <!-- EV Trend -->
+      <div class="card mb-12" style="padding:20px 24px">
+        <div class="flex items-center justify-between mb-16">
+          <div class="label">Exit Velocity Trend · 30 Days</div>
+          <div style="font-size:12px;font-weight:600;color:var(--success)">↑ +6.2 mph</div>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:5px;height:100px;padding:0 2px" id="trend-chart"></div>
+        <div class="flex justify-between mt-8">
+          <span class="caption">30 days ago</span>
+          <span class="caption">Today</span>
+        </div>
+      </div>
+
+      <!-- Session log -->
+      <div class="label mb-12 mt-20">Session Log</div>
+      <div id="session-log"></div>
+    </div>
+
+    <!-- ════ GAME ════ -->
+    <div class="screen" id="screen-game">
+      <div class="mb-24">
+        <div class="label mb-8">Game Mode</div>
+        <h1>Home Run Derby</h1>
+      </div>
+
+      <div class="card mb-20" style="overflow:hidden">
+        <div class="derby-scoreboard" id="derby-board">
+          <div class="derby-stat">
+            <div class="derby-num" style="color:var(--dist)" id="g-hr">0</div>
+            <div class="derby-lbl">Home Runs</div>
+          </div>
+          <div class="derby-stat">
+            <div class="derby-num" id="g-outs">10</div>
+            <div class="derby-lbl">Outs Left</div>
+          </div>
+          <div class="derby-stat">
+            <div class="derby-num" style="color:var(--la)" id="g-longest">--</div>
+            <div class="derby-lbl">Longest (ft)</div>
+          </div>
+          <div class="derby-stat">
+            <div class="derby-num" style="color:var(--ev)" id="g-peak">--</div>
+            <div class="derby-lbl">Peak EV (mph)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-8 mb-28">
+        <button class="btn btn-primary btn-lg" onclick="derbySwing()">⚾&nbsp; Take a Swing</button>
+        <button class="btn btn-ghost" onclick="resetDerby()">Reset Derby</button>
+      </div>
+
+      <div class="label mb-12">Global Leaderboard · Exit Velocity</div>
+      <div id="leaderboard"></div>
+    </div>
+
+    <!-- ════ COACH ════ -->
+    <div class="screen" id="screen-coach">
+      <div class="mb-24">
+        <div class="label mb-8">Coach Portal</div>
+        <h1>Your Roster</h1>
+      </div>
+
+      <div class="card-grid card-grid-4 mb-24">
+        <div class="card" style="padding:16px 20px">
+          <div class="label mb-8">Players</div>
+          <div style="font-family:var(--font-d);font-size:40px;letter-spacing:-1px">6</div>
+        </div>
+        <div class="card" style="padding:16px 20px">
+          <div class="label mb-8">Active This Week</div>
+          <div style="font-family:var(--font-d);font-size:40px;letter-spacing:-1px;color:var(--success)">4</div>
+        </div>
+        <div class="card" style="padding:16px 20px">
+          <div class="label mb-8">Team Avg EV</div>
+          <div style="font-family:var(--font-d);font-size:40px;letter-spacing:-1px;color:var(--ev)">88.4<span style="font-size:16px;color:var(--text2);margin-left:3px">mph</span></div>
+        </div>
+        <div class="card" style="padding:16px 20px">
+          <div class="label mb-8">Needs Attention</div>
+          <div style="font-family:var(--font-d);font-size:40px;letter-spacing:-1px;color:var(--warning)">2</div>
+        </div>
+      </div>
+
+      <div class="label mb-12">Roster</div>
+      <div class="player-grid" id="player-grid"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Summary Modal ── -->
+<div class="modal-overlay" id="summary-modal">
+  <div class="modal">
+    <div class="flex items-center justify-between mb-24">
+      <div>
+        <div class="label mb-6">Session Complete</div>
+        <h2>Your Results</h2>
+      </div>
+      <button class="btn btn-ghost" onclick="closeSummary()">Done</button>
+    </div>
+    <div class="card-grid card-grid-4" id="summary-stats"></div>
+  </div>
+</div>
+
+<!-- ── Player Drawer ── -->
+<div class="drawer-backdrop" id="drawer-backdrop" onclick="closeDrawer()"></div>
+<div class="drawer" id="player-drawer">
+  <div class="drawer-header">
+    <div class="player-avatar" id="d-avatar" style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px"></div>
+    <div style="flex:1">
+      <div style="font-weight:700;font-size:16px" id="d-name"></div>
+      <div class="caption" id="d-meta"></div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="flex gap-8" style="padding:12px 16px;border-bottom:1px solid var(--border)">
+    <div class="card" style="flex:1;padding:12px 14px">
+      <div class="label mb-4">Avg EV</div>
+      <div id="d-ev" style="font-family:var(--font-d);font-size:26px;color:var(--ev);letter-spacing:-.5px"></div>
+    </div>
+    <div class="card" style="flex:1;padding:12px 14px">
+      <div class="label mb-4">Peak EV</div>
+      <div id="d-pev" style="font-family:var(--font-d);font-size:26px;letter-spacing:-.5px"></div>
+    </div>
+    <div class="card" style="flex:1;padding:12px 14px">
+      <div class="label mb-4">Avg Carry</div>
+      <div id="d-dist" style="font-family:var(--font-d);font-size:26px;color:var(--dist);letter-spacing:-.5px"></div>
+    </div>
+  </div>
+  <div class="drawer-tabs">
+    <button class="drawer-tab active" onclick="drawerTab('overview',this)">Overview</button>
+    <button class="drawer-tab" onclick="drawerTab('notes',this)">Notes</button>
+    <button class="drawer-tab" onclick="drawerTab('drills',this)">Drills</button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+</div>
+
+<script>
+// ══ STATE ══════════════════════════════════════════
+let currentScreen='session',sessionActive=false,sessionMode='bp',swings=[],bleState='idle';
+let derbyHR=0,derbyOuts=10,derbyLong=0,derbyPeak=0,currentPlayer=null;
+
+const SESSIONS=[
+  {date:'Mar 29',mode:'Batting Practice',swings:18,avgEV:91.2,peakEV:97.4,peakDist:384},
+  {date:'Mar 27',mode:'Home Run Derby',  swings:22,avgEV:89.8,peakEV:101.2,peakDist:412},
+  {date:'Mar 25',mode:'Batting Practice',swings:15,avgEV:88.4,peakEV:94.1,peakDist:361},
+  {date:'Mar 23',mode:'Challenge',       swings:12,avgEV:90.1,peakEV:96.3,peakDist:375},
+  {date:'Mar 20',mode:'Batting Practice',swings:20,avgEV:87.6,peakEV:93.8,peakDist:358},
+  {date:'Mar 18',mode:'Batting Practice',swings:16,avgEV:86.2,peakEV:92.1,peakDist:344},
+  {date:'Mar 15',mode:'Home Run Derby',  swings:19,avgEV:85.9,peakEV:98.7,peakDist:398},
+];
+const EV_TREND=[82.1,83.4,84.0,84.8,85.5,86.2,86.8,87.6,88.4,89.1,90.0,91.2];
+const LEADERBOARD=[
+  {rank:1,name:'Mike Torres',   ev:104.2,emoji:'🥇'},
+  {rank:2,name:'Jake Rodriguez',ev:102.0,emoji:'🥈',me:true},
+  {rank:3,name:'Derek Smith',   ev:99.8, emoji:'🥉'},
+  {rank:4,name:'Carlos Reyes',  ev:97.3, emoji:''},
+  {rank:5,name:'Tyler Brooks',  ev:95.1, emoji:''},
+  {rank:6,name:'Marcus Lee',    ev:93.6, emoji:''},
+];
+const ROSTER=[
+  {name:'Jake Rodriguez',initials:'JR',color:'#7C5CFC',avgEV:91.2,peakEV:102,dist:384,sessions:3,trend:'up',trendV:2.8,lastSeen:'Today',totalSwings:247,notes:['Great improvement on launch angle this week.','Focus on hip rotation — tends to cast the hands early.'],drills:[{title:'Tee work — opposite field',desc:'15 swings to right field, focus on staying back and driving the ball the other way.',due:'Apr 2',done:false},{title:'Launch angle drills',desc:'10 reps on the LA tee, target 12–18° on every swing.',due:'Apr 5',done:true}]},
+  {name:'Derek Smith',  initials:'DS',color:'#00D4AA',avgEV:88.4,peakEV:99, dist:361,sessions:2,trend:'flat',trendV:0,  lastSeen:'Yesterday',totalSwings:189,notes:['Consistent contact hitter, needs more power work.'],drills:[{title:'Hip load drill',desc:'5 sets of 10 reps focusing on hip hinge and load.',due:'Apr 3',done:false}]},
+  {name:'Carlos Reyes', initials:'CR',color:'#FF8C42',avgEV:87.0,peakEV:97, dist:355,sessions:2,trend:'up',trendV:1.4,  lastSeen:'Today',totalSwings:201,notes:['Pull-heavy spray chart — encourage going oppo.'],drills:[]},
+  {name:'Tyler Brooks', initials:'TB',color:'#FFB830',avgEV:84.2,peakEV:93, dist:338,sessions:0,trend:'down',trendV:-1.8,lastSeen:'5 days ago',totalSwings:143,notes:['Missed last 3 sessions — follow up today.'],drills:[{title:'Short toss timing',desc:'20 min short toss to rebuild timing.',due:'Apr 1',done:false}]},
+  {name:'Marcus Lee',   initials:'ML',color:'#FF4D6D',avgEV:83.6,peakEV:90, dist:331,sessions:1,trend:'up',trendV:0.9,  lastSeen:'Mar 28',totalSwings:118,notes:[],drills:[]},
+  {name:'Ryan Patel',   initials:'RP',color:'#9C6FFF',avgEV:80.1,peakEV:86, dist:314,sessions:0,trend:'down',trendV:-2.1,lastSeen:'6 days ago',totalSwings:87,notes:['New to the team. Fundamentals first.'],drills:[{title:'Stance and grip fundamentals',desc:'Video session: proper stance, grip, and load position.',due:'Apr 1',done:false}]},
+];
+
+// ══ NAV ═══════════════════════════════════════════
+function nav(s){
+  document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+  document.getElementById('screen-'+s).classList.add('active');
+  document.getElementById('nav-'+s).classList.add('active');
+  currentScreen=s;
+  if(s==='history') renderHistory();
+  if(s==='game')    renderGame();
+  if(s==='coach')   renderCoach();
+}
+
+// ══ BLE ═══════════════════════════════════════════
+function toggleBle(){
+  const b=document.getElementById('ble-badge'),l=document.getElementById('ble-label');
+  if(bleState==='idle'){
+    bleState='scanning';b.className='ble-widget scanning';l.textContent='Scanning…';
+    setTimeout(()=>{bleState='connected';b.className='ble-widget connected';l.textContent='R10 Connected';},1800);
+  } else if(bleState==='connected'){
+    bleState='idle';b.className='ble-widget idle';l.textContent='Connect R10';
+  }
+}
+
+// ══ SESSION ═══════════════════════════════════════
+function setMode(m,btn){
+  sessionMode=m;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const labels={bp:'Batting Practice',derby:'Home Run Derby',challenge:'Daily Challenge'};
+  document.getElementById('session-mode-label').textContent=labels[m];
+}
+
+function startSession(){
+  sessionActive=true;swings=[];
+  document.getElementById('start-btn').style.display='none';
+  document.getElementById('end-btn').style.display='';
+  document.getElementById('mode-selector').style.display='none';
+  document.getElementById('live-metrics').style.display='';
+  document.getElementById('session-title').textContent='Live Session';
+  document.getElementById('session-sub').textContent='Swing data streaming from R10';
+  if(sessionMode==='derby') document.getElementById('derby-counter').style.display='block';
+  renderMetrics(null);renderAvgBars();drawSpray();
+}
+
+function genSwing(barrel=false){
+  const ev=barrel?(98+Math.random()*6):(76+Math.random()*24);
+  const la=barrel?(10+Math.random()*18):(-5+Math.random()*34);
+  const dist=Math.max(160,ev*3.9+la*2.2+(Math.random()-.5)*18);
+  const bat=ev/(1.3+Math.random()*0.12);
+  const spin=1800+Math.random()*1300;
+  const dir=Math.random()<.35?'pull':Math.random()<.6?'center':'oppo';
+  return{ev,la,dist:Math.round(dist),bat,spin:Math.round(spin),dir};
+}
+
+function simSwing(barrel=false){
+  if(!sessionActive)return;
+  const sw=genSwing(barrel);swings.push(sw);
+  renderMetrics(sw);renderAvgBars();drawSpray();renderSwingHistory();
+  if(sessionMode==='derby') updateDerbyCounter(sw);
+  const grid=document.getElementById('metrics-grid');
+  grid.classList.remove('swing-flash');void grid.offsetWidth;grid.classList.add('swing-flash');
+}
+
+function updateDerbyCounter(sw){
+  if(sw.dist<400) derbyOuts=Math.max(0,derbyOuts-1);
+  const hr=swings.filter(s=>s.dist>=400).length;
+  const outs=Math.max(0,10-swings.filter(s=>s.dist<400).length);
+  document.getElementById('derby-counter').innerHTML=
+    `<strong style="color:var(--dist)">${hr} HR</strong> &nbsp;·&nbsp; <strong style="color:var(--text)">${outs} outs left</strong>`;
+}
+
+function renderMetrics(sw){
+  const grid=document.getElementById('metrics-grid');
+  if(!sw){
+    grid.innerHTML=`
+      <div class="metric-card card glow-purple" style="color:var(--ev)"><div class="metric-label">Exit Velo</div><div class="metric-val">--<span class="metric-unit">mph</span></div></div>
+      <div class="metric-card card glow-teal" style="color:var(--la)"><div class="metric-label">Launch Angle</div><div class="metric-val">--<span class="metric-unit">°</span></div></div>
+      <div class="metric-card card glow-orange" style="color:var(--dist)"><div class="metric-label">Carry</div><div class="metric-val">--<span class="metric-unit">ft</span></div></div>
+      <div class="metric-card card sm" style="color:var(--bat)"><div class="metric-label">Bat Speed</div><div class="metric-val">--<span class="metric-unit">mph</span></div></div>
+      <div class="metric-card card sm" style="color:var(--spin)"><div class="metric-label">Spin Rate</div><div class="metric-val">--<span class="metric-unit">rpm</span></div></div>
+      <div class="metric-card card sm" style="color:var(--text2)"><div class="metric-label">Direction</div><div class="metric-val" style="font-size:22px">--</div></div>`;
+    return;
+  }
+  grid.innerHTML=`
+    <div class="metric-card card glow-purple" style="color:var(--ev)"><div class="metric-label">Exit Velo</div><div class="metric-val">${sw.ev.toFixed(1)}<span class="metric-unit">mph</span></div></div>
+    <div class="metric-card card glow-teal" style="color:var(--la)"><div class="metric-label">Launch Angle</div><div class="metric-val">${sw.la.toFixed(1)}<span class="metric-unit">°</span></div></div>
+    <div class="metric-card card glow-orange" style="color:var(--dist)"><div class="metric-label">Carry</div><div class="metric-val">${sw.dist}<span class="metric-unit">ft</span></div></div>
+    <div class="metric-card card sm" style="color:var(--bat)"><div class="metric-label">Bat Speed</div><div class="metric-val">${sw.bat.toFixed(1)}<span class="metric-unit">mph</span></div></div>
+    <div class="metric-card card sm" style="color:var(--spin)"><div class="metric-label">Spin Rate</div><div class="metric-val">${sw.spin}<span class="metric-unit">rpm</span></div></div>
+    <div class="metric-card card sm" style="color:var(--text2)"><div class="metric-label">Direction</div><div class="metric-val" style="font-size:22px">${sw.dir.charAt(0).toUpperCase()+sw.dir.slice(1)}</div></div>`;
+}
+
+function avg(arr,key){return arr.length?arr.reduce((s,x)=>s+x[key],0)/arr.length:0}
+
+function renderAvgBars(){
+  const n=swings.length;
+  document.getElementById('swing-count-label').textContent=`${n} swing${n!==1?'s':''}`;
+  document.getElementById('swing-count-label2').textContent=`${n} swing${n!==1?'s':''}`;
+  const bars=[
+    {label:'Exit velo', val:avg(swings,'ev').toFixed(1),  max:110,unit:'mph',color:'var(--ev)'},
+    {label:'Launch ang',val:avg(swings,'la').toFixed(1),  max:40, unit:'°',  color:'var(--la)'},
+    {label:'Bat speed', val:avg(swings,'bat').toFixed(1), max:85, unit:'mph',color:'var(--bat)'},
+    {label:'Carry',     val:avg(swings,'dist').toFixed(0),max:450,unit:'ft', color:'var(--dist)'},
+  ];
+  document.getElementById('avg-bars').innerHTML=bars.map(b=>{
+    const pct=n?Math.min(100,(parseFloat(b.val)/b.max)*100):0;
+    return`<div class="prog-row">
+      <div class="prog-label">${b.label}</div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${b.color}"></div></div>
+      <div class="prog-val" style="color:${b.color}">${n?b.val:'--'} <span style="font-size:10px;color:var(--text3)">${b.unit}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderSwingHistory(){
+  document.getElementById('swing-history').innerHTML=[...swings].reverse().slice(0,20).map((sw,i)=>{
+    const idx=swings.length-i;
+    const q=sw.ev>=98?['BARREL','q-barrel']:sw.ev>=95?['SOLID','q-solid']:sw.ev>=88?['GOOD','q-good']:['SOFT','q-soft'];
+    return`<div class="swing-row">
+      <div class="swing-idx">${idx}</div>
+      <div class="swing-ev">${sw.ev.toFixed(1)}<span style="font-size:11px;color:var(--text2)"> mph</span></div>
+      <div class="swing-details">${sw.la.toFixed(0)}° &middot; ${sw.dist} ft &middot; ${sw.dir}</div>
+      <div class="quality-badge ${q[1]}">${q[0]}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Spray Chart ──
+function drawSpray(){
+  const cv=document.getElementById('spray-canvas');
+  const ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  // Field
+  ctx.fillStyle='#060d06';ctx.fillRect(0,0,W,H);
+  for(let i=0;i<7;i++){ctx.fillStyle=i%2?'#080f08':'#060d06';ctx.fillRect(i*(W/7),0,W/7,H);}
+  // Foul lines
+  ctx.strokeStyle='rgba(255,255,255,.1)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(W/2,H);ctx.lineTo(8,8);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(W/2,H);ctx.lineTo(W-8,8);ctx.stroke();
+  // Distance markers
+  ctx.strokeStyle='rgba(255,255,255,.04)';ctx.setLineDash([2,4]);
+  [.4,.65,.85].forEach(r=>{
+    ctx.beginPath();ctx.arc(W/2,H-8,r*(H-12),Math.PI,0);ctx.stroke();
+  });
+  ctx.setLineDash([]);
+  // Home plate
+  ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.arc(W/2,H-8,3,0,Math.PI*2);ctx.fill();
+  // Swings
+  swings.forEach(sw=>{
+    const norm=Math.min(1,(sw.dist-150)/290);
+    const angle=sw.dir==='pull'?(.56+Math.random()*.18):sw.dir==='oppo'?(.26+Math.random()*.18):(.36+Math.random()*.28);
+    const r=norm*(H-20)*.88;
+    const x=W/2-Math.cos(angle*Math.PI)*r*1.12;
+    const y=H-8-Math.sin(angle*Math.PI)*r;
+    const barrel=sw.ev>=98;
+    ctx.beginPath();ctx.arc(x,y,barrel?5:3.5,0,Math.PI*2);
+    if(barrel){ctx.fillStyle='rgba(255,140,66,.9)';}else{ctx.fillStyle='rgba(124,92,252,.75)';}
+    ctx.fill();
+    if(barrel){ctx.strokeStyle='rgba(255,140,66,.4)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.stroke();}
+  });
+}
+
+// ── Summary ──
+function showSummary(){
+  if(!swings.length){resetSession();return;}
+  const n=swings.length;
+  const evs=swings.map(s=>s.ev),dists=swings.map(s=>s.dist),las=swings.map(s=>s.la);
+  const barrels=swings.filter(s=>s.ev>=98&&s.la>=8&&s.la<=32).length;
+  const hardHit=swings.filter(s=>s.ev>=95).length;
+  const a=arr=>arr.reduce((x,y)=>x+y,0)/arr.length;
+  const stats=[
+    {label:'Total Swings',   val:n+'',                                   unit:'',    color:'var(--text)'},
+    {label:'Avg Exit Velo',  val:a(evs).toFixed(1),                      unit:'mph', color:'var(--ev)'},
+    {label:'Peak Exit Velo', val:Math.max(...evs).toFixed(1),             unit:'mph', color:'var(--ev)'},
+    {label:'Avg Launch Ang.',val:a(las).toFixed(1),                      unit:'°',   color:'var(--la)'},
+    {label:'Avg Carry',      val:a(dists).toFixed(0),                    unit:'ft',  color:'var(--dist)'},
+    {label:'Peak Carry',     val:Math.max(...dists)+'',                   unit:'ft',  color:'var(--dist)'},
+    {label:'Hard Hit Rate',  val:((hardHit/n)*100).toFixed(0),           unit:'%',   color:'var(--accent)'},
+    {label:'Barrel Rate',    val:((barrels/n)*100).toFixed(0),           unit:'%',   color:'var(--warning)'},
+  ];
+  document.getElementById('summary-stats').innerHTML=stats.map(s=>`
+    <div class="card" style="padding:16px 18px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:1px;background:${s.color};opacity:.3"></div>
+      <div class="label mb-8">${s.label}</div>
+      <div style="font-family:var(--font-d);font-size:38px;letter-spacing:-.5px;color:${s.color}">${s.val}<span style="font-size:14px;color:var(--text2);margin-left:3px">${s.unit}</span></div>
+    </div>`).join('');
+  document.getElementById('summary-modal').classList.add('open');
+}
+function closeSummary(){document.getElementById('summary-modal').classList.remove('open');resetSession();}
+function resetSession(){
+  sessionActive=false;swings=[];derbyOuts=10;
+  document.getElementById('start-btn').style.display='';
+  document.getElementById('end-btn').style.display='none';
+  document.getElementById('mode-selector').style.display='';
+  document.getElementById('live-metrics').style.display='none';
+  document.getElementById('session-title').textContent='Ready to Hit';
+  document.getElementById('session-sub').textContent='Select a mode and connect your Garmin R10';
+  document.getElementById('derby-counter').style.display='none';
+}
+
+// ══ HISTORY ═══════════════════════════════════════
+function renderHistory(){
+  const max=Math.max(...EV_TREND),min=Math.min(...EV_TREND)-4;
+  document.getElementById('trend-chart').innerHTML=EV_TREND.map((v,i)=>{
+    const pct=((v-min)/(max-min))*100;
+    const isToday=i===EV_TREND.length-1;
+    return`<div class="bc-bar" data-v="${v} mph" style="height:${pct}%;flex:1;background:${isToday?'var(--ev)':'rgba(124,92,252,.28)'}"></div>`;
+  }).join('');
+  document.getElementById('session-log').innerHTML=SESSIONS.map(s=>`
+    <div class="card flex items-center gap-16" style="padding:14px 20px;margin-bottom:8px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="width:60px">
+        <div style="font-weight:600;font-size:14px">${s.date}</div>
+        <div class="caption">${s.swings} swings</div>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:500">${s.mode}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--font-d);font-size:28px;letter-spacing:-.5px;color:var(--ev)">${s.avgEV}<span style="font-size:13px;color:var(--text2);margin-left:2px">mph</span></div>
+        <div class="caption">Peak ${s.peakEV} · ${s.peakDist}ft</div>
+      </div>
+    </div>`).join('');
+}
+
+// ══ GAME ═══════════════════════════════════════════
+function renderGame(){renderLeaderboard();updateDerbyBoard();}
+function derbySwing(){
+  const sw=genSwing(Math.random()<.28);
+  if(sw.dist>=400)derbyHR++;else derbyOuts=Math.max(0,derbyOuts-1);
+  if(sw.dist>derbyLong)derbyLong=sw.dist;
+  if(sw.ev>derbyPeak)derbyPeak=sw.ev;
+  updateDerbyBoard();
+}
+function updateDerbyBoard(){
+  document.getElementById('g-hr').textContent=derbyHR;
+  document.getElementById('g-outs').textContent=derbyOuts;
+  document.getElementById('g-longest').textContent=derbyLong||'--';
+  document.getElementById('g-peak').textContent=derbyPeak?derbyPeak.toFixed(1):'--';
+  document.getElementById('g-outs').style.color=derbyOuts<=2?'var(--danger)':'var(--text)';
+  if(derbyOuts===0)setTimeout(()=>alert(`Derby over! You hit ${derbyHR} home run${derbyHR!==1?'s':''}. Reset to play again.`),100);
+}
+function resetDerby(){derbyHR=0;derbyOuts=10;derbyLong=0;derbyPeak=0;updateDerbyBoard();}
+function renderLeaderboard(){
+  document.getElementById('leaderboard').innerHTML=LEADERBOARD.map(e=>`
+    <div class="lb-row ${e.me?'me':''}">
+      <div class="lb-rank">${e.emoji||'#'+e.rank}</div>
+      <div class="lb-name">${e.name}${e.me?'<span style="font-size:10px;background:rgba(124,92,252,.15);color:var(--accent);padding:2px 8px;border-radius:10px;margin-left:8px;font-weight:700">YOU</span>':''}</div>
+      <div class="lb-score">${e.ev.toFixed(1)}<span class="lb-unit">mph</span></div>
+    </div>`).join('');
+}
+
+// ══ COACH ══════════════════════════════════════════
+function renderCoach(){
+  document.getElementById('player-grid').innerHTML=ROSTER.map(p=>{
+    const tIcon=p.trend==='up'?'↑':p.trend==='down'?'↓':'→';
+    const tClass=p.trend==='up'?'trend-up':p.trend==='down'?'trend-down':'trend-flat';
+    return`<div class="player-card" style="background:var(--card);opacity:${p.sessions>0?1:.55}" onclick="openDrawer('${p.name}')">
+      <div class="flex items-center gap-12 mb-16">
+        <div class="player-avatar" style="background:${p.color}20;color:${p.color}">${p.initials}</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:14px;margin-bottom:2px">${p.name}</div>
+          <div class="caption">${p.sessions} session${p.sessions!==1?'s':''} this week</div>
+        </div>
+        <div class="${tClass}" style="font-family:var(--font-d);font-size:18px;letter-spacing:-.3px">${tIcon}${p.trendV?p.trendV:''}</div>
+      </div>
+      <div class="flex gap-16">
+        <div><div class="label mb-4">Avg EV</div><div style="font-family:var(--font-d);font-size:26px;color:var(--ev);letter-spacing:-.5px">${p.avgEV}</div></div>
+        <div><div class="label mb-4">Peak</div><div style="font-family:var(--font-d);font-size:26px;letter-spacing:-.5px">${p.peakEV}</div></div>
+        <div><div class="label mb-4">Dist</div><div style="font-family:var(--font-d);font-size:26px;color:var(--dist);letter-spacing:-.5px">${p.dist}</div></div>
+      </div>
+      <div class="caption mt-8">Last active: ${p.lastSeen}</div>
+    </div>`;
+  }).join('');
+}
+
+function openDrawer(name){
+  const p=ROSTER.find(r=>r.name===name);if(!p)return;
+  currentPlayer=p;
+  document.getElementById('d-avatar').textContent=p.initials;
+  document.getElementById('d-avatar').style.cssText=`width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;background:${p.color}20;color:${p.color}`;
+  document.getElementById('d-name').textContent=p.name;
+  document.getElementById('d-meta').textContent=`${p.totalSwings} total swings · ${p.sessions} sessions this week`;
+  document.getElementById('d-ev').textContent=p.avgEV+' mph';
+  document.getElementById('d-pev').textContent=p.peakEV+' mph';
+  document.getElementById('d-dist').textContent=p.dist+' ft';
+  drawerTab('overview',document.querySelector('.drawer-tab'));
+  document.getElementById('player-drawer').classList.add('open');
+  document.getElementById('drawer-backdrop').classList.add('open');
+}
+function closeDrawer(){
+  document.getElementById('player-drawer').classList.remove('open');
+  document.getElementById('drawer-backdrop').classList.remove('open');
+}
+function drawerTab(tab,btn){
+  document.querySelectorAll('.drawer-tab').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  const p=currentPlayer;
+  const body=document.getElementById('drawer-body');
+  if(tab==='overview'){
+    body.innerHTML=`
+      <div class="label mb-12">Recent Sessions</div>
+      ${SESSIONS.slice(0,4).map(s=>`<div class="card flex items-center gap-12" style="padding:12px 14px;margin-bottom:7px">
+        <div style="flex:1"><div style="font-weight:500;font-size:13px">${s.mode}</div><div class="caption">${s.date} · ${s.swings} swings</div></div>
+        <div style="font-family:var(--font-d);font-size:22px;letter-spacing:-.3px;color:var(--ev)">${s.avgEV}<span style="font-size:11px;color:var(--text2)"> mph</span></div>
+      </div>`).join('')}
+      <div class="label mb-12 mt-20">Performance</div>
+      ${[['Exit velo',p.avgEV,110,'var(--ev)'],['Launch ang.',13.2,40,'var(--la)'],['Bat speed',64.8,85,'var(--bat)']].map(([l,v,m,c])=>{
+        const pct=Math.min(100,(v/m)*100);
+        return`<div class="prog-row"><div class="prog-label">${l}</div>
+          <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${c}"></div></div>
+          <div class="prog-val" style="color:${c}">${v}</div></div>`;
+      }).join('')}`;
+  } else if(tab==='notes'){
+    body.innerHTML=`
+      <div class="mb-16">
+        <textarea class="input mb-8" rows="3" id="note-input" placeholder="Add a coaching note…"></textarea>
+        <button class="btn btn-primary btn-sm" onclick="addNote()">Add Note</button>
+      </div>
+      <div class="label mb-12">Notes</div>
+      <div id="notes-list">
+        ${(p.notes||[]).map(n=>`<div class="card" style="padding:14px;margin-bottom:8px">
+          <div style="font-size:14px;line-height:1.6;color:var(--text)">${n}</div>
+          <div class="caption mt-8">Coach · Today</div>
+        </div>`).join('')}
+        ${!p.notes?.length?'<div class="caption">No notes yet.</div>':''}
+      </div>`;
+  } else {
+    body.innerHTML=`
+      <div class="card mb-16" style="padding:16px">
+        <div class="label mb-12">Assign Drill</div>
+        <input class="input mb-8" id="drill-title" placeholder="Drill title">
+        <textarea class="input mb-8" rows="2" id="drill-desc" placeholder="Description / instructions"></textarea>
+        <button class="btn btn-primary btn-sm" onclick="addDrill()">Assign Drill</button>
+      </div>
+      <div class="label mb-12">Assigned Drills</div>
+      <div id="drills-list">
+        ${(p.drills||[]).map(d=>`<div class="card" style="padding:14px;margin-bottom:8px;${d.done?'opacity:.45':''}">
+          <div class="flex items-center justify-between mb-6">
+            <div style="font-weight:600;font-size:13px">${d.title}</div>
+            ${d.done?`<span style="font-size:10px;color:var(--success);background:rgba(0,212,170,.1);padding:2px 9px;border-radius:10px;font-weight:700">DONE</span>`:`<span style="font-size:10px;color:var(--warning)">Due ${d.due}</span>`}
+          </div>
+          <div class="caption">${d.desc}</div>
+        </div>`).join('')}
+        ${!p.drills?.length?'<div class="caption">No drills assigned yet.</div>':''}
+      </div>`;
+  }
+}
+function addNote(){
+  const txt=document.getElementById('note-input')?.value?.trim();if(!txt)return;
+  currentPlayer.notes.unshift(txt);
+  document.getElementById('notes-list').insertAdjacentHTML('afterbegin',`<div class="card" style="padding:14px;margin-bottom:8px">
+    <div style="font-size:14px;line-height:1.6;color:var(--text)">${txt}</div>
+    <div class="caption mt-8">Coach · Just now</div>
+  </div>`);
+  document.getElementById('note-input').value='';
+}
+function addDrill(){
+  const title=document.getElementById('drill-title')?.value?.trim();
+  const desc=document.getElementById('drill-desc')?.value?.trim();
+  if(!title)return;
+  currentPlayer.drills.push({title,desc,due:'Apr 5',done:false});
+  document.getElementById('drills-list').insertAdjacentHTML('afterbegin',`<div class="card" style="padding:14px;margin-bottom:8px">
+    <div class="flex items-center justify-between mb-6">
+      <div style="font-weight:600;font-size:13px">${title}</div>
+      <span style="font-size:10px;color:var(--warning)">Due Apr 5</span>
+    </div>
+    <div class="caption">${desc||''}</div>
+  </div>`);
+  document.getElementById('drill-title').value='';
+  document.getElementById('drill-desc').value='';
+}
+
+// ── Init ──
+drawSpray();
+</script>
+</body>
+</html>
