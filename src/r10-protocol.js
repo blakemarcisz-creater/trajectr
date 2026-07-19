@@ -126,6 +126,7 @@ function buildSubscribeRequest() {
   const alertMessage = fieldVarint(1, 8); // AlertType.LAUNCH_MONITOR = 8
   return buildWrapper({ eventBytes: fieldMessage(1, fieldMessage(1, alertMessage)) });
 }
+const buildStartTiltCalRequest = () => buildWrapper({ serviceBytes: fieldMessage(7, EMPTY) });
 function buildShotConfigRequest(teeRangeMeters) {
   const cfg = concatBytes(
     fieldFloat(1, 21.0),   // temperature °C
@@ -198,6 +199,14 @@ function parseWrapper(bytes) {
         const st = firstField(df, 1); if (st !== undefined) notification.state = parseState(st);
         const met = firstField(df, 2); if (met !== undefined) notification.metrics = parseMetrics(met);
         const err = firstField(df, 3); if (err !== undefined) notification.error = parseError(err);
+        const tc = firstField(df, 4);
+        if (tc !== undefined) {
+          const tf = decodeFields(tc);
+          notification.tiltCalibration = {
+            status: ['UNKNOWN', 'IN_BOUNDS', 'RECALIBRATION_SUGGESTED', 'RECALIBRATION_REQUIRED'][firstField(tf, 1)] ?? firstField(tf, 1),
+            result: ['SUCCESS', 'ERROR', 'UNIT_MOVING'][firstField(tf, 2)] ?? firstField(tf, 2),
+          };
+        }
         out.event.notification = notification;
       }
     }
@@ -217,6 +226,15 @@ function parseWrapper(bytes) {
     if (wakeResp !== undefined) out.service.wakeStatus = firstField(decodeFields(wakeResp), 1);
     const shotCfgResp = firstField(sf, 12);
     if (shotCfgResp !== undefined) out.service.shotConfigSuccess = firstField(decodeFields(shotCfgResp), 1) === 1;
+    const tiltCalResp = firstField(sf, 8);
+    if (tiltCalResp !== undefined) {
+      out.service.tiltCalStatus = ['STARTED', 'IN_PROGRESS', 'ERROR'][firstField(decodeFields(tiltCalResp), 1)] ?? 'UNKNOWN';
+    }
+    const tiltResp = firstField(sf, 6);
+    if (tiltResp !== undefined) {
+      const t = firstField(decodeFields(tiltResp), 1);
+      if (t !== undefined) out.service.tilt = parseFloats(t, ['roll', 'pitch']);
+    }
   }
   return out;
 }
@@ -298,6 +316,15 @@ export class R10 {
     if (status.service?.status) this.cb.onState?.(status.service.status);
     await this.sendProtobuf(buildSubscribeRequest());
     this.log('ok', 'Subscribed to launch monitor alerts');
+  }
+
+  async startTiltCalibration() {
+    // The device recalibrates its tilt sensors — it must be sitting still on the
+    // ground when this runs. Result arrives as a push (tiltCalibration notification).
+    const resp = await this.sendProtobuf(buildStartTiltCalRequest());
+    const status = resp.service?.tiltCalStatus ?? 'no response';
+    this.log(status === 'ERROR' ? 'err' : 'ok', 'Tilt calibration: ' + status);
+    return status;
   }
 
   async sendShotConfig(ballDistanceFt) {
@@ -383,6 +410,10 @@ export class R10 {
       }
     }
     if (n.error?.code) this.cb.onError?.(n.error);
+    if (n.tiltCalibration) {
+      this.log(n.tiltCalibration.result === 'SUCCESS' ? 'ok' : 'err',
+        `Tilt calibration result: ${n.tiltCalibration.result} (${n.tiltCalibration.status})`);
+    }
     if (n.metrics && n.metrics.shot_id !== undefined) {
       if (this.processedShotIds.has(n.metrics.shot_id)) return;
       this.processedShotIds.add(n.metrics.shot_id);

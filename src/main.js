@@ -22,6 +22,7 @@ let r10 = null;
 let transport = null;
 let swings = [];          // this session
 let derby = { on: false, hr: 0, outs: 10, best: 0 };
+let reads = { cycles: 0, awaiting: false };  // radar RECORDING cycles vs. metrics that actually arrived
 
 // ── Logging (Settings screen debug panel) ────────────────────
 function log(tag, msg) {
@@ -74,6 +75,7 @@ async function connect() {
     });
     await r10.start();
     await r10.sendShotConfig(settings.ballDistanceFt);
+    await r10.startTiltCalibration().catch(e => log('err', 'Tilt cal failed: ' + e.message));
     setConnUi('connected', transport.name);
   } catch (e) {
     log('err', 'Connect failed: ' + e.message);
@@ -86,6 +88,17 @@ async function connect() {
 
 function setDeviceState(name) {
   if ($('device-state').textContent !== name) log('info', 'State: ' + name);
+  // Read-rate tracking: each RECORDING arms a cycle; if the device settles back to
+  // WAITING without ever pushing metrics, that swing was seen but not read.
+  if (name === 'RECORDING') {
+    reads.cycles++;
+    reads.awaiting = true;
+    renderSessionStats();
+  } else if (name === 'WAITING' && reads.awaiting) {
+    reads.awaiting = false;
+    log('info', `Radar triggered but no metrics (${readRate()}% read rate)`);
+    renderSessionStats();
+  }
   $('device-state').textContent = name;
   $('device-state').className = 'state-chip ' + (name === 'WAITING' ? 'ready' : name === 'ERROR' ? 'error' : '');
   $('session-sub').textContent =
@@ -109,6 +122,7 @@ function handleSwing(m) {
     hasBall: m.shot_type === 1 && !!bm,
   };
   swing.dist = swing.hasBall ? estimateCarryFt(swing.ev, swing.la, swing.spin) : null;
+  reads.awaiting = false;
   swings.push(swing);
   log('ok', `Swing ${swings.length}: ` + (swing.hasBall
     ? `EV ${swing.ev.toFixed(1)} mph, LA ${swing.la.toFixed(1)}°, ~${Math.round(swing.dist)} ft`
@@ -121,6 +135,9 @@ function handleSwing(m) {
 }
 
 function fmt(v, digits = 1) { return v === null || v === undefined ? '—' : v.toFixed(digits); }
+function readRate() {
+  return reads.cycles ? Math.round(100 * swings.filter(s => s.hasBall).length / reads.cycles) : 0;
+}
 
 function renderLastSwing(s) {
   $('m-ev').textContent = fmt(s.ev);
@@ -145,6 +162,7 @@ function renderSessionStats() {
     ? (withBat.reduce((a, s) => a + s.bat, 0) / withBat.length).toFixed(1) : '—';
   $('stat-max-dist').textContent = withBall.length
     ? Math.round(Math.max(...withBall.map(s => s.dist ?? 0))) : '—';
+  $('stat-read-rate').textContent = reads.cycles ? `${readRate()}%` : '—';
 }
 
 function renderSwingList() {
@@ -251,6 +269,11 @@ function bindSettings() {
     settings.hrDistanceFt = parseFloat($('set-hr').value) || 200;
     store.save('trajectr_settings', settings);
     renderDerby();
+  };
+  $('btn-tilt-cal').onclick = () => {
+    if (!r10) { toast('Connect to the R10 first'); return; }
+    toast('Calibrating — keep the R10 still on the ground');
+    r10.startTiltCalibration().catch(e => log('err', 'Tilt cal failed: ' + e.message));
   };
   $('btn-copy-log').onclick = async () => {
     const text = Array.from($('debug-log').children).map(l => l.textContent).join('\n');

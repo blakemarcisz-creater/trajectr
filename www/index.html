@@ -91,6 +91,7 @@
         <div class="stat"><div class="label">Max EV</div><div class="stat-val" id="stat-max-ev">—</div></div>
         <div class="stat"><div class="label">Avg Bat</div><div class="stat-val" id="stat-avg-bat">—</div></div>
         <div class="stat"><div class="label">Longest (ft)</div><div class="stat-val" id="stat-max-dist">—</div></div>
+        <div class="stat"><div class="label">Read Rate</div><div class="stat-val" id="stat-read-rate">—</div></div>
       </div>
 
       <div class="label mb-12">This Session</div>
@@ -171,6 +172,10 @@
           <span>Derby home run distance (ft)</span>
           <input type="number" id="set-hr" min="50" max="500" step="10">
         </label>
+        <div class="setting-row">
+          <span>Recalibrate tilt sensors (R10 must be still on the ground)</span>
+          <button class="btn btn-ghost" id="btn-tilt-cal">Calibrate</button>
+        </div>
         <div class="setting-row">
           <span>Saved sessions</span>
           <button class="btn btn-danger" id="btn-clear-history">Clear history</button>
