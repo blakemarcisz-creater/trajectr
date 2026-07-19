@@ -3,17 +3,15 @@
 // Browser (desktop/tablet Chrome testing): Web Bluetooth
 
 import { BleClient } from '@capacitor-community/bluetooth-le';
-import { UUIDS } from './r10-protocol.js';
+import { UUIDS, toHex } from './r10-protocol.js';
 
 const isNative = () => window.Capacitor?.isNativePlatform?.() === true;
 
-export async function connectR10({ onDisconnect, onBattery, onLog }) {
-  return isNative()
-    ? connectNative({ onDisconnect, onBattery, onLog })
-    : connectWeb({ onDisconnect, onBattery, onLog });
+export async function connectR10(opts) {
+  return isNative() ? connectNative(opts) : connectWeb(opts);
 }
 
-async function connectNative({ onDisconnect, onBattery, onLog }) {
+async function connectNative({ onDisconnect, onBattery, onLog, onRawMeasurement }) {
   await BleClient.initialize({ androidNeverForLocation: true });
   const device = await BleClient.requestDevice({
     optionalServices: [
@@ -37,6 +35,17 @@ async function connectNative({ onDisconnect, onBattery, onLog }) {
     (value) => notifyCb?.(new Uint8Array(value.buffer, value.byteOffset, value.byteLength))
   );
 
+  // Diagnostic: subscribe to the raw measurement-service channels the app normally
+  // ignores, to see whether shot data arrives here on swings the metrics path misses.
+  if (onRawMeasurement) {
+    for (const [name, uuid] of [['meas', UUIDS.MEASUREMENT_CHAR], ['ctrl', UUIDS.CONTROL_POINT_CHAR], ['stat', UUIDS.STATUS_CHAR]]) {
+      try {
+        await BleClient.startNotifications(device.deviceId, UUIDS.MEASUREMENT_SERVICE, uuid,
+          (v) => onRawMeasurement(name, toHex(new Uint8Array(v.buffer, v.byteOffset, v.byteLength))));
+      } catch (e) { onLog?.('err', `Raw ${name} unavailable: ${e.message}`); }
+    }
+  }
+
   return {
     name: device.name ?? 'R10',
     write: (bytes) => BleClient.write(
@@ -48,7 +57,7 @@ async function connectNative({ onDisconnect, onBattery, onLog }) {
   };
 }
 
-async function connectWeb({ onDisconnect, onBattery, onLog }) {
+async function connectWeb({ onDisconnect, onBattery, onLog, onRawMeasurement }) {
   if (!navigator.bluetooth) throw new Error('Bluetooth not available in this browser');
   const device = await navigator.bluetooth.requestDevice({
     acceptAllDevices: true,
@@ -69,6 +78,20 @@ async function connectWeb({ onDisconnect, onBattery, onLog }) {
     await battCh.startNotifications();
     battCh.addEventListener('characteristicvaluechanged', e => onBattery?.(e.target.value.getUint8(0)));
   } catch (e) { onLog?.('err', 'Battery unavailable: ' + e.message); }
+
+  if (onRawMeasurement) {
+    try {
+      const measSvc = await server.getPrimaryService(UUIDS.MEASUREMENT_SERVICE);
+      for (const [name, uuid] of [['meas', UUIDS.MEASUREMENT_CHAR], ['ctrl', UUIDS.CONTROL_POINT_CHAR], ['stat', UUIDS.STATUS_CHAR]]) {
+        try {
+          const ch = await measSvc.getCharacteristic(uuid);
+          await ch.startNotifications();
+          ch.addEventListener('characteristicvaluechanged', e =>
+            onRawMeasurement(name, toHex(new Uint8Array(e.target.value.buffer))));
+        } catch (e) { /* not all chars exist */ }
+      }
+    } catch (e) { onLog?.('err', 'Measurement service unavailable: ' + e.message); }
+  }
 
   const ifaceSvc = await server.getPrimaryService(UUIDS.DEVICE_INTERFACE_SERVICE);
   const notifier = await ifaceSvc.getCharacteristic(UUIDS.DEVICE_INTERFACE_NOTIFIER);

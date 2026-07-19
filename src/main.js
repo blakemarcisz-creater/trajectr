@@ -13,8 +13,9 @@ const store = {
   },
   save(key, value) { localStorage.setItem(key, JSON.stringify(value)); },
 };
-let settings = store.load('trajectr_settings', { ballDistanceFt: 8, hrDistanceFt: 200 });
+let settings = store.load('trajectr_settings', { ballDistanceFt: 8, hrDistanceFt: 200, diagnostics: false });
 if (settings.hrDistanceFt === undefined) settings.hrDistanceFt = 200;
+if (settings.diagnostics === undefined) settings.diagnostics = false;
 let history = store.load('trajectr_history', []);
 
 // ── Live state ───────────────────────────────────────────────
@@ -61,6 +62,9 @@ async function connect() {
       },
       onBattery: (pct) => { $('battery').textContent = pct + '%'; },
       onLog: log,
+      onRawMeasurement: settings.diagnostics
+        ? (chan, hex) => { if (hex !== '000000' && hex !== '000001' && hex !== '000100') log('raw', `${chan}: ${hex}`); }
+        : null,
     });
     r10 = new R10(transport, {
       onState: setDeviceState,
@@ -269,6 +273,12 @@ function bindSettings() {
     settings.hrDistanceFt = parseFloat($('set-hr').value) || 200;
     store.save('trajectr_settings', settings);
     renderDerby();
+  };
+  $('set-diag').checked = settings.diagnostics;
+  $('set-diag').onchange = () => {
+    settings.diagnostics = $('set-diag').checked;
+    store.save('trajectr_settings', settings);
+    toast(settings.diagnostics ? 'Diagnostics on — reconnect to capture raw data' : 'Diagnostics off');
   };
   $('btn-tilt-cal').onclick = () => {
     if (!r10) { toast('Connect to the R10 first'); return; }

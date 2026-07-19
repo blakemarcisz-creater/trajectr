@@ -97,7 +97,7 @@ h1{font-size:34px;letter-spacing:-.5px;line-height:1.1;font-weight:800}
 .setting-row input{width:90px;background:var(--card2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:9px 12px;font-size:15px;font-family:var(--font);text-align:center}
 
 #debug-log{background:#000;color:#8a8;font-family:Consolas,monospace;font-size:11px;height:260px;overflow-y:auto;padding:10px;border-radius:8px;white-space:pre-wrap;word-break:break-all}
-.log-err{color:#f66}.log-ok{color:#5f5}.log-info{color:#88a}
+.log-err{color:#f66}.log-ok{color:#5f5}.log-info{color:#88a}.log-raw{color:#fb4}
 
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card2);border:1px solid var(--border2);color:var(--text);padding:12px 22px;border-radius:99px;font-size:14px;font-weight:600;transition:transform .25s;z-index:100;max-width:90vw;text-align:center}
 #toast.show{transform:translateX(-50%) translateY(0)}
