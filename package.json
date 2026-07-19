@@ -11,7 +11,9 @@
   "scripts": {
     "build": "esbuild src/main.js --bundle --outfile=www/js/bundle.js",
     "sync": "npm run build && cap sync android",
-    "open": "cap open android"
+    "open": "cap open android",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.2.0",
@@ -20,6 +22,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.2",
-    "esbuild": "^0.28.1"
+    "esbuild": "^0.28.1",
+    "wrangler": "^4.112.0"
   }
 }

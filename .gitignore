@@ -8,3 +8,10 @@ android/app/release/
 android/.idea/
 android/capacitor-cordova-android-plugins/build/
 *.apk
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
