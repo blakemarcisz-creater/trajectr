@@ -1,0 +1,114 @@
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#050508; --surface:#0c0c14; --card:#111120; --card2:#161628;
+  --border:rgba(255,255,255,0.06); --border2:rgba(255,255,255,0.11);
+  --accent:#7C5CFC; --accent2:#00D4AA;
+  --danger:#FF4D6D; --warning:#FFB830; --success:#00D4AA;
+  --ev:#7C5CFC; --la:#00D4AA; --dist:#FF8C42; --bat:#FFB830; --spin:#FF4D6D;
+  --text:#EDEAF8; --text2:#7A7899; --text3:#3A3858;
+  --font:-apple-system,'Segoe UI',Roboto,sans-serif;
+  --r:10px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;overflow:hidden}
+
+#app{display:flex;height:100vh;overflow:hidden}
+#sidebar{width:200px;min-width:200px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 10px;padding-top:calc(20px + env(safe-area-inset-top))}
+#main{flex:1;overflow-y:auto;position:relative}
+.screen{display:none;padding:28px 32px 48px;min-height:100%}
+.screen.active{display:block}
+
+.logo-wrap{padding:6px 10px 20px;border-bottom:1px solid var(--border);margin-bottom:14px}
+.logo-mark{display:flex;align-items:center;gap:10px;margin-bottom:5px}
+.logo-arc{width:30px;height:30px;flex-shrink:0}
+.logo-text{font-size:21px;font-weight:800;letter-spacing:-.3px}
+.logo-text em{color:var(--accent);font-style:normal}
+.logo-sub{font-size:10px;color:var(--text3);letter-spacing:1.8px;text-transform:uppercase}
+
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:8px;cursor:pointer;color:var(--text2);font-size:14px;font-weight:500;transition:all .15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;font-family:var(--font)}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.nav-item.active{color:var(--accent);background:rgba(124,92,252,.12)}
+.nav-icon{width:26px;text-align:center}
+.nav-spacer{flex:1}
+
+.ble-widget{margin:0 2px 8px;padding:11px 12px;border-radius:9px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;border:1px solid var(--border);background:var(--card);transition:all .2s}
+.ble-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0}
+.ble-widget.connected{border-color:rgba(0,212,170,.25);background:rgba(0,212,170,.05)}
+.ble-widget.connected .ble-dot{background:var(--success);box-shadow:0 0 8px var(--success)}
+.ble-widget.scanning .ble-dot{background:var(--warning);animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.batt-row{padding:0 12px}
+
+h1{font-size:34px;letter-spacing:-.5px;line-height:1.1;font-weight:800}
+.label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.8px;color:var(--text3)}
+.caption{font-size:12px;color:var(--text2);line-height:1.5}
+.caption.warn{color:var(--warning);margin-top:8px}
+.mb-12{margin-bottom:12px}.mt-20{margin-top:20px}
+
+.screen-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px}
+.screen-head .label{margin-bottom:6px}
+.head-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+
+.state-chip{display:inline-block;padding:5px 14px;border-radius:20px;background:var(--card);border:1px solid var(--border);font-weight:700;font-size:12px;color:var(--text2)}
+.state-chip.ready{color:var(--success);border-color:rgba(0,212,170,.3)}
+.state-chip.error{color:var(--danger);border-color:rgba(255,77,109,.3)}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r)}
+.card-grid{display:grid;gap:10px}
+.metrics-grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:18px}
+
+.metric-card{padding:16px 18px;position:relative;overflow:hidden}
+.metric-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,currentColor,transparent);opacity:.3}
+.metric-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.6px;color:var(--text2);margin-bottom:8px}
+.metric-val{font-size:36px;line-height:1;letter-spacing:-.5px;font-weight:800}
+.metric-unit{font-size:12px;font-weight:500;color:var(--text2);margin-left:3px}
+.glow-purple{box-shadow:inset 0 0 40px rgba(124,92,252,.04)}
+.glow-teal{box-shadow:inset 0 0 40px rgba(0,212,170,.04)}
+.swing-flash{animation:swingFlash .5s ease}
+@keyframes swingFlash{0%{outline:2px solid rgba(124,92,252,.5);outline-offset:2px}100%{outline:2px solid transparent}}
+
+.session-stats{display:flex;padding:16px 20px;margin-bottom:20px;gap:24px;flex-wrap:wrap}
+.stat .label{margin-bottom:6px}
+.stat-val{font-size:26px;font-weight:800;letter-spacing:-.5px}
+
+.swing-list{display:flex;flex-direction:column;gap:5px}
+.swing-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;background:var(--card);border:1px solid var(--border);font-size:13px}
+.swing-idx{width:32px;color:var(--text3);font-weight:600;font-size:12px;flex-shrink:0}
+.swing-ev{font-size:20px;font-weight:800;color:var(--ev);width:70px;letter-spacing:-.3px;flex-shrink:0}
+.swing-details{flex:1;color:var(--text2);font-size:12px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 0 20px rgba(124,92,252,.3)}
+.btn-primary:active{transform:scale(.97)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:active{color:var(--text);background:rgba(255,255,255,.03)}
+.btn-danger{background:rgba(255,77,109,.12);color:var(--danger);border:1px solid rgba(255,77,109,.25)}
+.btn-lg{padding:14px 30px;font-size:15px;border-radius:10px}
+
+.derby-scoreboard{display:flex;align-items:stretch;margin-bottom:20px;overflow:hidden}
+.derby-stat{text-align:center;padding:26px 20px;flex:1}
+.derby-stat+.derby-stat{border-left:1px solid var(--border)}
+.derby-num{font-size:56px;line-height:1;letter-spacing:-2px;font-weight:800}
+.derby-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.8px;color:var(--text2);margin-top:8px}
+
+.settings-card{padding:6px 20px}
+.setting-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid var(--border);font-size:14px}
+.setting-row:last-child{border-bottom:none}
+.setting-row input{width:90px;background:var(--card2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:9px 12px;font-size:15px;font-family:var(--font);text-align:center}
+
+#debug-log{background:#000;color:#8a8;font-family:Consolas,monospace;font-size:11px;height:260px;overflow-y:auto;padding:10px;border-radius:8px;white-space:pre-wrap;word-break:break-all}
+.log-err{color:#f66}.log-ok{color:#5f5}.log-info{color:#88a}
+
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card2);border:1px solid var(--border2);color:var(--text);padding:12px 22px;border-radius:99px;font-size:14px;font-weight:600;transition:transform .25s;z-index:100;max-width:90vw;text-align:center}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+@media (max-width:640px){
+  #app{flex-direction:column-reverse}
+  #sidebar{width:100%;min-width:0;flex-direction:row;align-items:center;padding:8px 10px;border-right:none;border-top:1px solid var(--border)}
+  .logo-wrap,.batt-row{display:none}
+  .nav-item{flex-direction:column;gap:4px;font-size:11px;padding:8px 4px;text-align:center}
+  .nav-spacer{display:none}
+  .ble-widget{margin:0}
+  .ble-widget span{display:none}
+  .screen{padding:20px 16px 40px}
+  h1{font-size:26px}
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TrajectR</string>
+    <string name="title_activity_main">TrajectR</string>
+    <string name="package_name">com.trajectr.app</string>
+    <string name="custom_url_scheme">com.trajectr.app</string>
+</resources>

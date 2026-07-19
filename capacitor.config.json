@@ -1,0 +1,8 @@
+{
+  "appId": "com.trajectr.app",
+  "appName": "TrajectR",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}

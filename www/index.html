@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>TrajectR</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app">
+
+  <aside id="sidebar">
+    <div class="logo-wrap">
+      <div class="logo-mark">
+        <svg class="logo-arc" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="15" stroke="rgba(124,92,252,.2)" stroke-width="1"/>
+          <path d="M6 24 Q10 8 26 8" stroke="#7C5CFC" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <circle cx="26" cy="8" r="3" fill="#7C5CFC"/>
+          <circle cx="6" cy="24" r="2" fill="rgba(124,92,252,.5)"/>
+        </svg>
+        <div class="logo-text">Traject<em>R</em></div>
+      </div>
+      <div class="logo-sub">Know your ball flight</div>
+    </div>
+
+    <button class="nav-item active" id="nav-session"><span class="nav-icon">⚾</span> Session</button>
+    <button class="nav-item" id="nav-history"><span class="nav-icon">📈</span> History</button>
+    <button class="nav-item" id="nav-game"><span class="nav-icon">🏆</span> Derby</button>
+    <button class="nav-item" id="nav-settings"><span class="nav-icon">⚙️</span> Settings</button>
+
+    <div class="nav-spacer"></div>
+
+    <div class="ble-widget idle" id="ble-badge">
+      <div class="ble-dot"></div>
+      <span id="ble-label">Connect R10</span>
+    </div>
+    <div class="caption batt-row">Battery: <span id="battery">—</span></div>
+  </aside>
+
+  <main id="main">
+
+    <!-- SESSION -->
+    <div class="screen active" id="screen-session">
+      <div class="screen-head">
+        <div>
+          <div class="label">Live Session</div>
+          <h1>Hitting</h1>
+          <div class="caption" id="session-sub">Connect your R10 to start</div>
+        </div>
+        <div class="head-right">
+          <span class="state-chip" id="device-state">—</span>
+          <button class="btn btn-ghost" id="btn-end-session">End Session</button>
+        </div>
+      </div>
+
+      <div class="label mb-12">Last Swing</div>
+      <div class="card-grid metrics-grid" id="metrics-grid">
+        <div class="metric-card card glow-purple" style="color:var(--ev)">
+          <div class="metric-label">Exit Velo</div>
+          <div class="metric-val" id="m-ev">—<span class="metric-unit">mph</span></div>
+        </div>
+        <div class="metric-card card glow-teal" style="color:var(--la)">
+          <div class="metric-label">Launch Angle</div>
+          <div class="metric-val" id="m-la">—<span class="metric-unit">°</span></div>
+        </div>
+        <div class="metric-card card" style="color:var(--dist)">
+          <div class="metric-label">Direction</div>
+          <div class="metric-val" id="m-dir">—<span class="metric-unit">°</span></div>
+        </div>
+        <div class="metric-card card" style="color:var(--spin)">
+          <div class="metric-label">Spin</div>
+          <div class="metric-val" id="m-spin">—<span class="metric-unit">rpm</span></div>
+        </div>
+        <div class="metric-card card" style="color:var(--bat)">
+          <div class="metric-label">Bat Speed</div>
+          <div class="metric-val" id="m-bat">—<span class="metric-unit">mph</span></div>
+        </div>
+      </div>
+      <div class="caption warn" id="no-ball-note" style="display:none">
+        Ball flight wasn't tracked on that swing — check spacing (8 ft behind ball, 8+ ft to the net).
+      </div>
+
+      <div class="card session-stats">
+        <div class="stat"><div class="label">Swings</div><div class="stat-val" id="stat-count">0</div></div>
+        <div class="stat"><div class="label">Tracked</div><div class="stat-val" id="stat-tracked">0</div></div>
+        <div class="stat"><div class="label">Avg EV</div><div class="stat-val" id="stat-avg-ev">—</div></div>
+        <div class="stat"><div class="label">Max EV</div><div class="stat-val" id="stat-max-ev">—</div></div>
+        <div class="stat"><div class="label">Avg Bat</div><div class="stat-val" id="stat-avg-bat">—</div></div>
+      </div>
+
+      <div class="label mb-12">This Session</div>
+      <div class="swing-list" id="swing-list"></div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="screen" id="screen-history">
+      <div class="screen-head">
+        <div>
+          <div class="label">Progress</div>
+          <h1>Your Stats</h1>
+        </div>
+      </div>
+      <div class="label mb-12">Personal Records</div>
+      <div class="card-grid metrics-grid">
+        <div class="metric-card card glow-purple" style="color:var(--ev)">
+          <div class="metric-label">Peak Exit Velo</div>
+          <div class="metric-val" id="pr-ev">—<span class="metric-unit">mph</span></div>
+        </div>
+        <div class="metric-card card" style="color:var(--bat)">
+          <div class="metric-label">Peak Bat Speed</div>
+          <div class="metric-val" id="pr-bat">—<span class="metric-unit">mph</span></div>
+        </div>
+        <div class="metric-card card" style="color:var(--spin)">
+          <div class="metric-label">Max Spin</div>
+          <div class="metric-val" id="pr-spin">—<span class="metric-unit">rpm</span></div>
+        </div>
+        <div class="metric-card card glow-teal" style="color:var(--la)">
+          <div class="metric-label">Sessions</div>
+          <div class="metric-val" id="pr-sessions">0</div>
+        </div>
+      </div>
+      <div class="label mb-12 mt-20">Session Log</div>
+      <div class="swing-list" id="session-log"></div>
+    </div>
+
+    <!-- DERBY -->
+    <div class="screen" id="screen-game">
+      <div class="screen-head">
+        <div>
+          <div class="label">Game Mode</div>
+          <h1>Home Run Derby</h1>
+          <div class="caption" id="derby-status"></div>
+        </div>
+      </div>
+      <div class="card derby-scoreboard">
+        <div class="derby-stat">
+          <div class="derby-num" style="color:var(--dist)" id="g-hr">0</div>
+          <div class="derby-lbl">Home Runs</div>
+        </div>
+        <div class="derby-stat">
+          <div class="derby-num" id="g-outs">10</div>
+          <div class="derby-lbl">Outs Left</div>
+        </div>
+        <div class="derby-stat">
+          <div class="derby-num" style="color:var(--ev)" id="g-best">—</div>
+          <div class="derby-lbl">Best EV (mph)</div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-lg" id="derby-toggle">Start Derby</button>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="screen" id="screen-settings">
+      <div class="screen-head">
+        <div>
+          <div class="label">Setup</div>
+          <h1>Settings</h1>
+        </div>
+      </div>
+      <div class="card settings-card">
+        <label class="setting-row">
+          <span>Ball distance from R10 (ft)</span>
+          <input type="number" id="set-distance" min="3" max="20" step="0.5">
+        </label>
+        <label class="setting-row">
+          <span>Derby home run threshold (mph EV)</span>
+          <input type="number" id="set-hr" min="30" max="110" step="1">
+        </label>
+        <div class="setting-row">
+          <span>Saved sessions</span>
+          <button class="btn btn-danger" id="btn-clear-history">Clear history</button>
+        </div>
+      </div>
+      <div class="label mb-12 mt-20">Debug Log <button class="btn btn-ghost" id="btn-copy-log" style="margin-left:10px;padding:5px 12px">Copy</button></div>
+      <div id="debug-log"></div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast"></div>
+<script src="js/bundle.js"></script>
+</body>
+</html>

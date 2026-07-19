@@ -1,0 +1,25 @@
+{
+  "name": "trajectr",
+  "version": "1.0.0",
+  "description": "TrajectR — baseball hitting metrics from a Garmin Approach R10",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blakemarcisz-creater/trajectr.git"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --outfile=www/js/bundle.js",
+    "sync": "npm run build && cap sync android",
+    "open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor-community/bluetooth-le": "^8.2.0",
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/core": "^8.4.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.4.2",
+    "esbuild": "^0.28.1"
+  }
+}

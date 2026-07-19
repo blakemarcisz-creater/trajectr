@@ -1,0 +1,10 @@
+node_modules/
+www/js/bundle.js
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+android/.idea/
+android/capacitor-cordova-android-plugins/build/
+*.apk
