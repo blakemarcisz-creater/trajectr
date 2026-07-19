@@ -1,5 +1,6 @@
 import { R10 } from './r10-protocol.js';
 import { connectR10 } from './transport.js';
+import { estimateCarryFt } from './physics.js';
 
 const MS_TO_MPH = 2.23694;
 const $ = (id) => document.getElementById(id);
@@ -12,7 +13,8 @@ const store = {
   },
   save(key, value) { localStorage.setItem(key, JSON.stringify(value)); },
 };
-let settings = store.load('trajectr_settings', { ballDistanceFt: 8, hrThresholdMph: 65 });
+let settings = store.load('trajectr_settings', { ballDistanceFt: 8, hrDistanceFt: 200 });
+if (settings.hrDistanceFt === undefined) settings.hrDistanceFt = 200;
 let history = store.load('trajectr_history', []);
 
 // ── Live state ───────────────────────────────────────────────
@@ -106,9 +108,10 @@ function handleSwing(m) {
     bat: cm?.club_head_speed !== undefined ? cm.club_head_speed * MS_TO_MPH : null,
     hasBall: m.shot_type === 1 && !!bm,
   };
+  swing.dist = swing.hasBall ? estimateCarryFt(swing.ev, swing.la, swing.spin) : null;
   swings.push(swing);
   log('ok', `Swing ${swings.length}: ` + (swing.hasBall
-    ? `EV ${swing.ev.toFixed(1)} mph, LA ${swing.la.toFixed(1)}°`
+    ? `EV ${swing.ev.toFixed(1)} mph, LA ${swing.la.toFixed(1)}°, ~${Math.round(swing.dist)} ft`
     : `bat ${swing.bat?.toFixed(1) ?? '?'} mph (no ball tracked)`));
   renderLastSwing(swing);
   renderSessionStats();
@@ -121,6 +124,7 @@ function fmt(v, digits = 1) { return v === null || v === undefined ? '—' : v.t
 
 function renderLastSwing(s) {
   $('m-ev').textContent = fmt(s.ev);
+  $('m-dist').textContent = s.dist === null ? '—' : Math.round(s.dist);
   $('m-la').textContent = fmt(s.la);
   $('m-dir').textContent = fmt(s.dir);
   $('m-spin').textContent = s.spin === null ? '—' : Math.round(s.spin).toLocaleString();
@@ -139,6 +143,8 @@ function renderSessionStats() {
     ? Math.max(...withBall.map(s => s.ev)).toFixed(1) : '—';
   $('stat-avg-bat').textContent = withBat.length
     ? (withBat.reduce((a, s) => a + s.bat, 0) / withBat.length).toFixed(1) : '—';
+  $('stat-max-dist').textContent = withBall.length
+    ? Math.round(Math.max(...withBall.map(s => s.dist ?? 0))) : '—';
 }
 
 function renderSwingList() {
@@ -147,7 +153,7 @@ function renderSwingList() {
       <span class="swing-idx">#${swings.length - i}</span>
       <span class="swing-ev">${s.hasBall ? s.ev.toFixed(1) : '—'}</span>
       <span class="swing-details">${s.hasBall
-        ? `LA ${s.la.toFixed(1)}° · dir ${s.dir.toFixed(1)}° · ${Math.round(s.spin)} rpm · bat ${fmt(s.bat)} mph`
+        ? `~${Math.round(s.dist)} ft · LA ${s.la.toFixed(1)}° · dir ${s.dir.toFixed(1)}° · ${Math.round(s.spin)} rpm · bat ${fmt(s.bat)} mph`
         : `bat ${fmt(s.bat)} mph — ball not tracked`}</span>
     </div>`).join('');
 }
@@ -192,9 +198,11 @@ function renderHistory() {
   const all = history.flatMap(h => h.swings ?? []);
   const withBall = all.filter(s => s.hasBall);
   const withBat = all.filter(s => s.bat !== null);
+  // Older saved swings predate the distance model — estimate on the fly.
+  const dists = withBall.map(s => s.dist ?? estimateCarryFt(s.ev, s.la, s.spin)).filter(d => d !== null);
   $('pr-ev').textContent = withBall.length ? Math.max(...withBall.map(s => s.ev)).toFixed(1) : '—';
+  $('pr-dist').textContent = dists.length ? Math.round(Math.max(...dists)) : '—';
   $('pr-bat').textContent = withBat.length ? Math.max(...withBat.map(s => s.bat)).toFixed(1) : '—';
-  $('pr-spin').textContent = withBall.length ? Math.round(Math.max(...withBall.map(s => s.spin))).toLocaleString() : '—';
   $('pr-sessions').textContent = history.length;
 
   $('session-log').innerHTML = history.length
@@ -209,11 +217,11 @@ function renderHistory() {
 
 // ── Derby ────────────────────────────────────────────────────
 function derbySwing(s) {
-  if (derby.outs <= 0) return;
-  if (s.ev >= settings.hrThresholdMph) {
+  if (derby.outs <= 0 || s.dist === null) return;
+  if (s.dist >= settings.hrDistanceFt) {
     derby.hr++;
-    if (s.ev > derby.best) derby.best = s.ev;
-    toast(`💥 HOME RUN — ${s.ev.toFixed(1)} mph`);
+    if (s.dist > derby.best) derby.best = s.dist;
+    toast(`💥 HOME RUN — ~${Math.round(s.dist)} ft`);
   } else {
     derby.outs--;
     if (derby.outs === 0) toast(`Derby over — ${derby.hr} home runs`);
@@ -223,24 +231,24 @@ function derbySwing(s) {
 function renderDerby() {
   $('g-hr').textContent = derby.hr;
   $('g-outs').textContent = derby.outs;
-  $('g-best').textContent = derby.best ? derby.best.toFixed(1) : '—';
+  $('g-best').textContent = derby.best ? Math.round(derby.best) : '—';
   $('derby-toggle').textContent = derby.on ? 'Stop Derby' : 'Start Derby';
   $('derby-status').textContent = derby.on
-    ? `Live — every tracked hit ≥ ${settings.hrThresholdMph} mph is a home run`
+    ? `Live — every hit carrying ≥ ${settings.hrDistanceFt} ft is a home run`
     : 'Start a derby, then hit. Uses live R10 data.';
 }
 
 // ── Settings ─────────────────────────────────────────────────
 function bindSettings() {
   $('set-distance').value = settings.ballDistanceFt;
-  $('set-hr').value = settings.hrThresholdMph;
+  $('set-hr').value = settings.hrDistanceFt;
   $('set-distance').onchange = () => {
     settings.ballDistanceFt = parseFloat($('set-distance').value) || 8;
     store.save('trajectr_settings', settings);
     if (r10) r10.sendShotConfig(settings.ballDistanceFt).catch(e => log('err', e.message));
   };
   $('set-hr').onchange = () => {
-    settings.hrThresholdMph = parseFloat($('set-hr').value) || 65;
+    settings.hrDistanceFt = parseFloat($('set-hr').value) || 200;
     store.save('trajectr_settings', settings);
     renderDerby();
   };

@@ -59,11 +59,15 @@
           <div class="metric-label">Exit Velo</div>
           <div class="metric-val" id="m-ev">—<span class="metric-unit">mph</span></div>
         </div>
+        <div class="metric-card card glow-orange" style="color:var(--dist)">
+          <div class="metric-label">Est. Carry</div>
+          <div class="metric-val" id="m-dist">—<span class="metric-unit">ft</span></div>
+        </div>
         <div class="metric-card card glow-teal" style="color:var(--la)">
           <div class="metric-label">Launch Angle</div>
           <div class="metric-val" id="m-la">—<span class="metric-unit">°</span></div>
         </div>
-        <div class="metric-card card" style="color:var(--dist)">
+        <div class="metric-card card" style="color:var(--text2)">
           <div class="metric-label">Direction</div>
           <div class="metric-val" id="m-dir">—<span class="metric-unit">°</span></div>
         </div>
@@ -86,6 +90,7 @@
         <div class="stat"><div class="label">Avg EV</div><div class="stat-val" id="stat-avg-ev">—</div></div>
         <div class="stat"><div class="label">Max EV</div><div class="stat-val" id="stat-max-ev">—</div></div>
         <div class="stat"><div class="label">Avg Bat</div><div class="stat-val" id="stat-avg-bat">—</div></div>
+        <div class="stat"><div class="label">Longest (ft)</div><div class="stat-val" id="stat-max-dist">—</div></div>
       </div>
 
       <div class="label mb-12">This Session</div>
@@ -106,13 +111,13 @@
           <div class="metric-label">Peak Exit Velo</div>
           <div class="metric-val" id="pr-ev">—<span class="metric-unit">mph</span></div>
         </div>
+        <div class="metric-card card glow-orange" style="color:var(--dist)">
+          <div class="metric-label">Longest Carry</div>
+          <div class="metric-val" id="pr-dist">—<span class="metric-unit">ft</span></div>
+        </div>
         <div class="metric-card card" style="color:var(--bat)">
           <div class="metric-label">Peak Bat Speed</div>
           <div class="metric-val" id="pr-bat">—<span class="metric-unit">mph</span></div>
-        </div>
-        <div class="metric-card card" style="color:var(--spin)">
-          <div class="metric-label">Max Spin</div>
-          <div class="metric-val" id="pr-spin">—<span class="metric-unit">rpm</span></div>
         </div>
         <div class="metric-card card glow-teal" style="color:var(--la)">
           <div class="metric-label">Sessions</div>
@@ -143,7 +148,7 @@
         </div>
         <div class="derby-stat">
           <div class="derby-num" style="color:var(--ev)" id="g-best">—</div>
-          <div class="derby-lbl">Best EV (mph)</div>
+          <div class="derby-lbl">Longest (ft)</div>
         </div>
       </div>
       <button class="btn btn-primary btn-lg" id="derby-toggle">Start Derby</button>
@@ -163,8 +168,8 @@
           <input type="number" id="set-distance" min="3" max="20" step="0.5">
         </label>
         <label class="setting-row">
-          <span>Derby home run threshold (mph EV)</span>
-          <input type="number" id="set-hr" min="30" max="110" step="1">
+          <span>Derby home run distance (ft)</span>
+          <input type="number" id="set-hr" min="50" max="500" step="10">
         </label>
         <div class="setting-row">
           <span>Saved sessions</span>

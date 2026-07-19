@@ -369,12 +369,17 @@ export class R10 {
     if (n.state) {
       this.cb.onState?.(n.state);
       // Device drops to STANDBY (sleep) after idling — wake it back up automatically
-      // like the official app does, so a session never silently dies.
+      // like the official app does, so a session never silently dies. Cooldown keeps us
+      // from fighting the device while it's being carried (it re-sleeps every second).
       if (n.state === 'STANDBY' && this.handshakeDone) {
-        this.log('info', 'Device went to sleep — sending wake-up');
-        this.sendProtobuf(buildWakeUpRequest())
-          .then(() => this.log('ok', 'Device woken back up'))
-          .catch(e => this.log('err', 'Auto-wake failed: ' + e.message));
+        const now = Date.now();
+        if (!this.lastAutoWake || now - this.lastAutoWake > 15000) {
+          this.lastAutoWake = now;
+          this.log('info', 'Device went to sleep — sending wake-up');
+          this.sendProtobuf(buildWakeUpRequest())
+            .then(() => this.log('ok', 'Device woken back up'))
+            .catch(e => this.log('err', 'Auto-wake failed: ' + e.message));
+        }
       }
     }
     if (n.error?.code) this.cb.onError?.(n.error);

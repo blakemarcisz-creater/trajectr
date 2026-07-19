@@ -63,6 +63,7 @@ h1{font-size:34px;letter-spacing:-.5px;line-height:1.1;font-weight:800}
 .metric-unit{font-size:12px;font-weight:500;color:var(--text2);margin-left:3px}
 .glow-purple{box-shadow:inset 0 0 40px rgba(124,92,252,.04)}
 .glow-teal{box-shadow:inset 0 0 40px rgba(0,212,170,.04)}
+.glow-orange{box-shadow:inset 0 0 40px rgba(255,140,66,.04)}
 .swing-flash{animation:swingFlash .5s ease}
 @keyframes swingFlash{0%{outline:2px solid rgba(124,92,252,.5);outline-offset:2px}100%{outline:2px solid transparent}}
 
